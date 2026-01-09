@@ -1,0 +1,92 @@
+# Cloud Build Configuration Example
+# This demonstrates the CI/CD pipeline setup (sanitized)
+
+steps:
+  # Step 1: Build Docker image
+  # NOTE: Multi-tenant architecture - instance config is fetched at runtime from Firestore
+  # Only platform-level configuration is set at build time
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      # Platform/Infrastructure configuration (build args)
+      - '--build-arg'
+      - 'NEXT_PUBLIC_SITE_URL=https://example.com'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_MEDIA_BASE_URL=https://storage.googleapis.com/example-bucket'
+      - '--build-arg'
+      - 'GOOGLE_CLOUD_PROJECT=${PROJECT_ID}'
+      - '--build-arg'
+      - 'FIRESTORE_DATABASE_ID=prod-db'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_FIRESTORE_DATABASE_ID=prod-db'
+      - '--build-arg'
+      - 'GCS_BUCKET=example-media-bucket'
+      # Firebase Client SDK configuration (public keys)
+      - '--build-arg'
+      - 'NEXT_PUBLIC_FIREBASE_API_KEY=${_FIREBASE_API_KEY}'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${_FIREBASE_AUTH_DOMAIN}'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID}'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${_FIREBASE_STORAGE_BUCKET}'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${_FIREBASE_MESSAGING_SENDER_ID}'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_FIREBASE_APP_ID=${_FIREBASE_APP_ID}'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=${_FIREBASE_MEASUREMENT_ID}'
+      - '-t'
+      - 'gcr.io/${PROJECT_ID}/app-name:latest'
+      - '.'
+
+  # Step 2: Push image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/${PROJECT_ID}/app-name:latest'
+
+  # Step 3: Deploy to Cloud Run
+  # Instance-specific configuration (branding, features) is resolved at runtime via:
+  # 1. Middleware sets x-instance-id header based on hostname
+  # 2. InstanceContext fetches config from Firestore
+  # 3. useMediaUrl hook uses runtime instanceId for media URL resolution
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'app-name'
+      - '--image'
+      - 'gcr.io/${PROJECT_ID}/app-name:latest'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--port'
+      - '3000'
+      - '--memory'
+      - '1Gi'
+      - '--cpu'
+      - '2'
+      - '--timeout'
+      - '300'
+      - '--max-instances'
+      - '10'
+      - '--set-env-vars'
+      # Platform-level runtime configuration
+      # Instance-specific config is fetched from Firestore at runtime
+      - 'NODE_ENV=production,NEXT_PUBLIC_SITE_URL=https://example.com,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},FIRESTORE_DATABASE_ID=prod-db,NEXT_PUBLIC_FIRESTORE_DATABASE_ID=prod-db,GCS_BUCKET=example-media-bucket,NEXT_PUBLIC_MEDIA_BASE_URL=https://storage.googleapis.com/example-bucket'
+      # Security: Reference secret from Secret Manager
+      - '--update-secrets'
+      - 'BOOTSTRAP_SECRET_TOKEN=bootstrap-secret-token:latest'
+      - '--service-account'
+      - 'cloud-run-service@${PROJECT_ID}.iam.gserviceaccount.com'
+
+# Images to be pushed to registry
+images:
+  - 'gcr.io/${PROJECT_ID}/app-name:latest'
+
+# Logging configuration
+options:
+  logging: CLOUD_LOGGING_ONLY
