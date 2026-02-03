@@ -6,12 +6,16 @@ A comprehensive collection of production-ready and prototype projects demonstrat
 
 **Production Projects:**
 - [Nandi Platform](./projects/nandi-platform/) - Multi-tenant SaaS platform (Production Beta)
+- [Content Generator](./projects/content-generator/) - AI-powered content generation pipeline (Production-ready)
 - [Social Media Agent](./projects/social-media-agent/) - AI-powered video content automation (Production-ready)
 - [Mahabir Audio Processing](./projects/mahabir-audio-processing/) - AI transcription & correction system (Production-ready)
 - [Nandi Mindfulness App](./projects/nandi-mindfulness-app/) - AI-powered wellness platform (Production Beta)
 
 **Prototype Collection:**
 - [Prototype Projects](./projects/prototype-projects/) - 5 diverse prototypes showcasing technology versatility
+
+**Technical Expertise:**
+- [Technical Expertise](./technical-expertise.md) - Detailed mapping of skills to implementations
 
 ---
 
@@ -22,6 +26,7 @@ This portfolio represents real-world projects spanning multiple domains, technol
 ### What You'll Find
 
 - **Production Systems**: Live applications serving real users
+- **AI/LLM Pipelines**: Multi-step orchestration with validation, retry logic, cost tracking
 - **Architecture Patterns**: Multi-tenant SaaS, microservices, DDD, event-driven systems
 - **AI/ML Integration**: OpenAI, LSTM models, NLP processing, RAG systems
 - **Full-Stack Development**: Next.js, React, Python, Java, TypeScript
@@ -45,6 +50,22 @@ A white-label platform enabling organizations to launch branded content systems.
 - ✅ Full CI/CD pipeline with automated deployments
 
 **Tech Stack:** Next.js 14, TypeScript, Firebase, GCP, Docker
+
+---
+
+### [Content Generator](./projects/content-generator/) | [📖 Documentation](./projects/content-generator/README.md) | [🏗️ Architecture](./projects/content-generator/architecture.md)
+
+**Production-ready** | AI-powered content generation pipeline with multi-step LLM orchestration
+
+Transforms YouTube transcripts into production-ready articles, courses, quizzes using structured outputs, 5-layer validation, and operational metrics.
+
+**Key Achievements:**
+- ✅ Multi-step pipeline: YouTube Sync → AI Analysis → Review → Publish
+- ✅ 5-layer validation chain with fail-fast patterns
+- ✅ Structured outputs with OpenAI JSON schema enforcement
+- ✅ Retry logic with exponential backoff and cost tracking
+
+**Tech Stack:** Python, FastAPI, PostgreSQL, OpenAI, Firebase, GCS
 
 ---
 
@@ -127,6 +148,18 @@ A collection showcasing Domain-Driven Design, NLP processing, astronomical calcu
 | **Components** | 100+ React components |
 | **API Routes** | 50+ serverless endpoints |
 
+### Content Generator
+
+| Metric | Value |
+|--------|-------|
+| **Status** | Production-ready |
+| **Total Commits** | 150+ |
+| **Python Files** | 198+ |
+| **Lines of Code** | ~15,000+ (Python) |
+| **Development Period** | Nov 2025 - Feb 2026 |
+| **Services** | 25+ core services |
+| **Content Types** | 5 (Article, Course, Quiz, Audio, Video) |
+
 ### Social Media Agent
 
 | Metric | Value |
@@ -173,6 +206,15 @@ A collection showcasing Domain-Driven Design, NLP processing, astronomical calcu
 
 ## Technical Expertise Demonstrated
 
+### AI/LLM Engineering
+- ✅ Multi-step LLM pipeline orchestration
+- ✅ Structured outputs with JSON schema enforcement
+- ✅ Prompt engineering with layered templates
+- ✅ Multi-layer validation chains
+- ✅ Retry logic with exponential backoff
+- ✅ Cost tracking and optimization
+- ✅ Operational metrics and health monitoring
+
 ### Architecture & Design
 - ✅ Multi-tenant SaaS architecture
 - ✅ Domain-Driven Design (DDD)
@@ -182,7 +224,7 @@ A collection showcasing Domain-Driven Design, NLP processing, astronomical calcu
 - ✅ RESTful API design
 
 ### AI/ML Integration
-- ✅ OpenAI API integration
+- ✅ OpenAI API integration (GPT-4, DALL·E, TTS)
 - ✅ LSTM neural networks (TensorFlow/Keras)
 - ✅ NLP processing (NLTK, spaCy)
 - ✅ RAG (Retrieval Augmented Generation)
@@ -233,19 +275,22 @@ project-name/
 ## What Makes This Portfolio Stand Out
 
 1. **Production Experience**: Multiple projects in production serving real users
-2. **Technical Depth**: Detailed architecture documentation and case studies
-3. **Diverse Technologies**: Python, JavaScript, TypeScript, Java across different stacks
-4. **AI/ML Integration**: Practical implementations of AI/ML in production systems
-5. **Cloud Expertise**: GCP, Firebase, Docker, CI/CD pipeline experience
-6. **Problem Solving**: Real-world challenges solved with documented solutions
-7. **Code Quality**: Sanitized code samples demonstrating best practices
+2. **AI/LLM Depth**: Production-grade LLM pipelines with validation, retry, and cost tracking
+3. **Technical Depth**: Detailed architecture documentation and case studies
+4. **Diverse Technologies**: Python, JavaScript, TypeScript, Java across different stacks
+5. **AI/ML Integration**: Practical implementations of AI/ML in production systems
+6. **Cloud Expertise**: GCP, Firebase, Docker, CI/CD pipeline experience
+7. **Problem Solving**: Real-world challenges solved with documented solutions
+8. **Code Quality**: Sanitized code samples demonstrating best practices
 
 ---
 
 ## Quick Links
 
 - [All Projects](./projects/) - Browse all project showcases
+- [Technical Expertise](./technical-expertise.md) - Detailed skill-to-implementation mapping
 - [Nandi Platform](./projects/nandi-platform/) - Multi-tenant SaaS platform
+- [Content Generator](./projects/content-generator/) - AI content pipeline
 - [Social Media Agent](./projects/social-media-agent/) - AI video automation
 - [Mahabir Audio Processing](./projects/mahabir-audio-processing/) - AI transcription
 - [Nandi Mindfulness App](./projects/nandi-mindfulness-app/) - Wellness platform
@@ -259,4 +304,4 @@ This is a showcase repository. All code samples and documentation have been sani
 
 ---
 
-**Last Updated:** January 2026
+**Last Updated:** February 2026
