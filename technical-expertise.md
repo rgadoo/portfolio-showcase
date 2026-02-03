@@ -376,6 +376,55 @@ Published (Firestore + GCS)
 
 ---
 
+### Audio Pipeline
+
+**Skill:** Building text-to-speech pipelines with multiple providers
+
+**Evidence (Content Generator):**
+
+| Component | Implementation |
+|-----------|----------------|
+| Voice Service | Unified interface for TTS providers |
+| OpenAI TTS | 6 voices (alloy, echo, fable, onyx, nova, shimmer), speed 0.25x-4.0x |
+| ElevenLabs | Custom voices, stability/similarity controls, speed 0.5x-2.0x |
+| Audio Processing | Duration calculation, format validation, segment combination |
+
+**Workflow:**
+```
+Text/Script → Voice Service → TTS Provider → Audio File (.mp3)
+                   │
+                   ├── OpenAI TTS (tts-1, tts-1-hd models)
+                   └── ElevenLabs (eleven_multilingual_v2)
+```
+
+---
+
+### Video Pipeline
+
+**Skill:** Building audio-to-video conversion with visualization
+
+**Evidence (Content Generator):**
+
+| Component | Implementation |
+|-----------|----------------|
+| Waveform Generator | librosa analysis + matplotlib rendering + MoviePy composition |
+| Subtitle Service | YouTube-style burned-in captions, 2.5 words/sec timing |
+| Video Encoding | FFmpeg with optimized settings, 1080p/720p/480p |
+| Real-Time Sync | Waveform animation synced to audio playback |
+
+**Workflow:**
+```
+Audio File → librosa Analysis → Waveform Frames → MoviePy Composition
+                                      ↓
+                              Subtitle Generation (from script)
+                                      ↓
+                              Burn-in Subtitles → FFmpeg Encode → Video (.mp4)
+```
+
+📖 [Architecture Documentation](./projects/content-generator/architecture.md)
+
+---
+
 ## Summary Table
 
 | Capability | Nandi Platform | Content Generator |
@@ -387,12 +436,17 @@ Published (Firestore + GCS)
 | Retry/backoff logic | — | ✅ |
 | Model selection & cost tracking | — | ✅ |
 | Operational metrics | — | ✅ |
+| Text-to-Speech (OpenAI, ElevenLabs) | — | ✅ |
+| Audio-to-Video conversion | — | ✅ |
+| Waveform visualization | — | ✅ |
+| Subtitle generation & burning | — | ✅ |
 | Multi-tenant architecture | ✅ | — |
 | Authentication & RBAC | ✅ | — |
 | Admin tooling | ✅ | — |
-| Cloud deployment (GCP) | ✅ | — |
-| Firestore (document store) | ✅ | — |
+| Cloud deployment (GCP) | ✅ | ✅ |
+| Firestore (document store) | ✅ | ✅ |
 | PostgreSQL | — | ✅ |
+| GCS media storage | ✅ | ✅ |
 | Defense-in-depth security | ✅ | — |
 | Content workflow automation | ✅ | ✅ |
 

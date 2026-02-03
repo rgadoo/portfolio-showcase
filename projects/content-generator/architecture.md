@@ -2,379 +2,629 @@
 
 ## System Overview
 
-Content Generator is a multi-stage AI pipeline that transforms YouTube transcripts into production-ready content. The architecture emphasizes reliability, cost-efficiency, and operational visibility.
+Content Generator is a comprehensive AI content platform with multiple generation pathways, audio/video processing, and multi-tenant publishing to Firebase and GCS.
 
 ## High-Level Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Content Generator Pipeline                         │
+│                         Content Generator Platform                           │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                  │
-│  │   YouTube    │───▶│  Transcript  │───▶│     AI       │                  │
-│  │    Sync      │    │    Queue     │    │   Analysis   │                  │
-│  └──────────────┘    └──────────────┘    └──────────────┘                  │
-│         │                   │                   │                           │
-│         ▼                   ▼                   ▼                           │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                  │
-│  │  PostgreSQL  │    │    Retry     │    │   OpenAI     │                  │
-│  │   Staging    │    │    Logic     │    │   Service    │                  │
-│  └──────────────┘    └──────────────┘    └──────────────┘                  │
-│         │                                       │                           │
-│         ▼                                       ▼                           │
-│  ┌──────────────┐                       ┌──────────────┐                   │
-│  │    Draft     │◀──────────────────────│  Validation  │                   │
-│  │   Service    │                       │    Chain     │                   │
-│  └──────────────┘                       └──────────────┘                   │
-│         │                                                                   │
-│         ▼                                                                   │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                  │
-│  │   Staging    │───▶│   Review     │───▶│  Publisher   │                  │
-│  │   Service    │    │   Workflow   │    │   Service    │                  │
-│  └──────────────┘    └──────────────┘    └──────────────┘                  │
-│                                                 │                           │
-│                                                 ▼                           │
-│                                          ┌──────────────┐                   │
-│                                          │  Firestore   │                   │
-│                                          │    + GCS     │                   │
-│                                          └──────────────┘                   │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                     CONTENT GENERATION LAYER                         │   │
+│  ├─────────────────────────────────────────────────────────────────────┤   │
+│  │                                                                     │   │
+│  │   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐        │   │
+│  │   │   Article    │    │    Course    │    │     Quiz     │        │   │
+│  │   │  Generator   │    │  Generator   │    │  Generator   │        │   │
+│  │   └──────────────┘    └──────────────┘    └──────────────┘        │   │
+│  │                                                                     │   │
+│  │   ┌──────────────┐    ┌──────────────┐                             │   │
+│  │   │    Audio     │    │   YouTube    │                             │   │
+│  │   │  Generator   │    │    Sync      │                             │   │
+│  │   └──────────────┘    └──────────────┘                             │   │
+│  │                                                                     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│                                    ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                        AUDIO PIPELINE                                │   │
+│  ├─────────────────────────────────────────────────────────────────────┤   │
+│  │                                                                     │   │
+│  │   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐        │   │
+│  │   │    Voice     │    │   OpenAI     │    │  ElevenLabs  │        │   │
+│  │   │   Service    │───▶│     TTS      │    │    Voice     │        │   │
+│  │   └──────────────┘    └──────────────┘    └──────────────┘        │   │
+│  │                                                                     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│                                    ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                        VIDEO PIPELINE                                │   │
+│  ├─────────────────────────────────────────────────────────────────────┤   │
+│  │                                                                     │   │
+│  │   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐        │   │
+│  │   │   Waveform   │    │   Subtitle   │    │    Video     │        │   │
+│  │   │  Generator   │    │   Service    │    │   Encoder    │        │   │
+│  │   └──────────────┘    └──────────────┘    └──────────────┘        │   │
+│  │                                                                     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│                                    ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                     PUBLISHING LAYER                                 │   │
+│  ├─────────────────────────────────────────────────────────────────────┤   │
+│  │                                                                     │   │
+│  │   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐        │   │
+│  │   │     GCS      │    │  Firestore   │    │   Operation  │        │   │
+│  │   │   Storage    │    │  Publisher   │    │   Tracking   │        │   │
+│  │   └──────────────┘    └──────────────┘    └──────────────┘        │   │
+│  │                                                                     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Core Components
+## Content Generation Layer
 
-### 1. YouTube Sync Service
+### Article Generation Service
 
-**Responsibility:** Fetches videos, metadata, and transcripts from YouTube channels/playlists.
+**Responsibility:** Generate structured articles from prompts or transcripts.
 
-**Key Features:**
+**Features:**
+- AI-powered content generation with OpenAI
+- Structured JSON output (title, sections, paragraphs)
+- Optional FAQ generation
+- Hero image generation via DALL·E
+- Taxonomy validation (pillar, category, tags)
+- SEO metadata generation
+
+**Workflow:**
+```
+Prompt → PromptBuilder → OpenAI API → Validation → PostProcessing → ArticleDraft
+```
+
+### Course Generation Service
+
+**Responsibility:** Generate complete course structures with modules and lessons.
+
+**Features:**
+- Multi-module course structure
+- Lessons with objectives, notes, resources
+- Instructor info management
+- Difficulty levels (beginner, intermediate, advanced)
+- Enrollment types (open, admin-only, invite-only, paid)
+- Duration calculation
+
+**Schema:**
+```python
+Course
+├── title, description, difficulty
+├── instructor: {name, bio, image}
+├── modules[]
+│   ├── title, description, objectives[]
+│   └── lessons[]
+│       ├── title, description
+│       ├── content, notes, resources[]
+│       └── duration, order
+└── settings: {enrollment, pricing}
+```
+
+### Quiz Generation Service
+
+**Responsibility:** Generate quizzes with multiple question types.
+
+**Features:**
+- Question types: multiple-choice, true/false, short answer
+- Configurable difficulty (easy, medium, hard)
+- Question count control
+- Settings: passing score, time limit, shuffle, review mode
+- Answer explanations
+
+**Schema:**
+```python
+Quiz
+├── title, description, difficulty
+├── questions[]
+│   ├── question, type
+│   ├── options[] (for multiple choice)
+│   ├── correct_answer
+│   └── explanation
+└── settings: {passing_score, time_limit, shuffle}
+```
+
+### Audio Generation Service
+
+**Responsibility:** Generate audio scripts and synthesize speech.
+
+**Features:**
+- Script generation with AI (podcast, narration, dialogue, meditation, tutorial)
+- Segments with pause timing, emphasis, tone hints
+- Voice recommendations per provider
+- Duration estimation
+- Target audience customization
+
+**Script Schema:**
+```python
+AudioScript
+├── title, format (podcast, narration, meditation, etc.)
+├── segments[]
+│   ├── text, speaker (optional)
+│   ├── pause_before, pause_after
+│   ├── emphasis, tone_hint
+│   └── duration_estimate
+└── voice_settings: {provider, voice_id, speed}
+```
+
+### YouTube Sync Service
+
+**Responsibility:** Synchronize YouTube channels and import transcripts.
+
+**Features:**
 - Channel and playlist synchronization
 - Video metadata extraction
-- Transcript fetching via youtube-transcript-api
+- Transcript fetching and storage
 - Rate limit handling with Retry-After support
+- Quota tracking
 
+---
+
+## Audio Pipeline
+
+### Voice Service
+
+**Responsibility:** Abstract TTS providers behind a unified interface.
+
+**Providers:**
+
+| Provider | Voices | Speed Range | Features |
+|----------|--------|-------------|----------|
+| **OpenAI TTS** | alloy, echo, fable, onyx, nova, shimmer | 0.25x - 4.0x | tts-1, tts-1-hd models |
+| **ElevenLabs** | Custom voice library | 0.5x - 2.0x | Stability, similarity boost |
+
+**Implementation:**
 ```python
-# Workflow
-fetch_channel_videos() → store_video_metadata() → queue_transcript_import()
+class VoiceService:
+    def generate_audio(self, text: str, settings: VoiceSettings) -> bytes:
+        if settings.provider == "openai":
+            return self._generate_openai(text, settings)
+        elif settings.provider == "elevenlabs":
+            return self._generate_elevenlabs(text, settings)
+    
+    def _generate_openai(self, text, settings):
+        response = openai.audio.speech.create(
+            model=settings.model,  # tts-1 or tts-1-hd
+            voice=settings.voice,  # alloy, echo, fable, etc.
+            input=text,
+            speed=settings.speed   # 0.25 to 4.0
+        )
+        return response.content
+    
+    def _generate_elevenlabs(self, text, settings):
+        audio = elevenlabs.generate(
+            text=text,
+            voice=settings.voice_id,
+            model="eleven_multilingual_v2"
+        )
+        return audio
 ```
 
-### 2. Transcript Queue Service
+**Audio Processing:**
+- Format validation (MP3, WAV)
+- Duration calculation
+- Segment combination for long content
+- Preview generation for testing
 
-**Responsibility:** Manages transcript import with retry scheduling.
+---
 
-**Key Features:**
-- Queue-based processing
-- Exponential backoff with jitter
-- Max retry limits
-- Status tracking (pending, processing, completed, failed)
+## Video Pipeline
 
-**Retry Formula:**
-```python
-delay = base_delay * (2 ** retry_count) * (1 ± 0.1)  # With jitter
-max_delay = 300  # 5 minutes cap
+### Video Generation Service
+
+**Responsibility:** Convert audio content to video with visualization.
+
+**Workflow:**
+```
+AudioDraft → promote_to_video() → VideoDraft
+    ↓
+Generate video with style (waveform, static, slides)
+    ↓
+Add subtitles (burned-in)
+    ↓
+Encode with FFmpeg
+    ↓
+Upload to GCS
 ```
 
-### 3. Prompt Builder Service
+### Waveform Generator
 
-**Responsibility:** Assembles layered prompts for AI generation.
+**Responsibility:** Create animated audio visualization synced to playback.
 
-**Key Features:**
-- Template-based system (Markdown files)
-- Variable interpolation (`{{variable_name}}`)
-- Content-type specific prompts
-- Context injection (taxonomy, difficulty, instance)
-
-**Prompt Layers:**
-1. **System Prompts** - Instructions from templates
-2. **User Prompts** - Content requests with metadata
-3. **Context Injection** - Taxonomy, content type, difficulty
-
-### 4. OpenAI Service
-
-**Responsibility:** Handles OpenAI API calls with structured outputs.
-
-**Key Features:**
-- JSON schema enforcement via `response_format`
-- Configurable model selection
-- Token usage tracking
-- Cost estimation
-- Retry with exponential backoff
-
-**Structured Output Configuration:**
+**Implementation:**
 ```python
-response_format={
-    "type": "json_schema",
-    "json_schema": {
-        "name": schema_name,
-        "schema": schema,
-        "strict": False
-    }
+class WaveformGenerator:
+    def generate(self, audio_path: str, output_path: str, subtitles: list):
+        # Load audio and analyze with librosa
+        y, sr = librosa.load(audio_path)
+        
+        # Calculate waveform for each frame
+        frames = []
+        for frame_time in frame_times:
+            waveform_slice = self._get_waveform_at_time(y, sr, frame_time)
+            frame = self._render_frame(waveform_slice, frame_time, subtitles)
+            frames.append(frame)
+        
+        # Compose video with MoviePy
+        video = ImageSequenceClip(frames, fps=30)
+        audio = AudioFileClip(audio_path)
+        final = video.set_audio(audio)
+        final.write_videofile(output_path, codec='libx264')
+```
+
+**Features:**
+- Real-time waveform sync with audio
+- Customizable colors and styling
+- 30 FPS smooth animation
+- Matplotlib rendering
+
+### Subtitle Service
+
+**Responsibility:** Generate and burn subtitles into video.
+
+**Features:**
+- Generate subtitles from script segments or transcript
+- Industry-standard timing (2.5 words/second)
+- Text formatting: 42 chars/line, max 2 lines
+- SRT file generation
+- YouTube-style burned-in subtitles with background boxes
+
+**Implementation:**
+```python
+class SubtitleService:
+    WORDS_PER_SECOND = 2.5
+    MAX_CHARS_PER_LINE = 42
+    MAX_LINES = 2
+    
+    def generate_subtitles(self, script_segments: list) -> list:
+        subtitles = []
+        current_time = 0.0
+        
+        for segment in script_segments:
+            words = segment.text.split()
+            duration = len(words) / self.WORDS_PER_SECOND
+            
+            subtitles.append({
+                "start": current_time,
+                "end": current_time + duration,
+                "text": self._wrap_text(segment.text)
+            })
+            
+            current_time += duration + segment.pause_after
+        
+        return subtitles
+    
+    def burn_subtitles(self, video_clip, subtitles):
+        """Add YouTube-style subtitles with background boxes."""
+        subtitle_clips = []
+        for sub in subtitles:
+            txt_clip = TextClip(
+                sub["text"],
+                fontsize=48,
+                color='white',
+                bg_color='rgba(0,0,0,0.7)',
+                method='caption'
+            ).set_position(('center', 'bottom'))
+            .set_start(sub["start"])
+            .set_end(sub["end"])
+            subtitle_clips.append(txt_clip)
+        
+        return CompositeVideoClip([video_clip] + subtitle_clips)
+```
+
+### Video Encoding
+
+**Resolution Profiles:**
+| Profile | Resolution | Bitrate |
+|---------|------------|---------|
+| 1080p | 1920x1080 | 8 Mbps |
+| 720p | 1280x720 | 5 Mbps |
+| 480p | 854x480 | 2.5 Mbps |
+
+**FFmpeg Settings:**
+- Codec: libx264
+- Audio: AAC 192kbps
+- Preset: medium (balance speed/quality)
+
+---
+
+## Publishing Layer
+
+### GCS Storage Service
+
+**Responsibility:** Upload media files with multi-tenant path isolation.
+
+**Path Structure:**
+```
+{bucket}/
+├── {instanceId}/
+│   ├── audio/
+│   │   └── {pillar}/{category}/{filename}.mp3
+│   ├── video/
+│   │   └── {pillar}/{category}/{filename}.mp4
+│   ├── images/
+│   │   ├── pages/{slug}/{filename}.jpg
+│   │   └── thumbnails/{pillar}/{category}/{slug}.jpg
+│   ├── transcripts/
+│   │   └── {contentId}.txt
+│   └── resources/
+│       └── {filename}
+```
+
+**Features:**
+- Automatic MIME type detection
+- Public URL generation
+- Cache control headers (max-age=31536000 for media)
+- File existence checking
+- Copy/delete operations
+
+### Firestore Publisher
+
+**Responsibility:** Publish content documents to Firestore.
+
+**Content Type Mapping:**
+| Generator | Firestore `contentType` |
+|-----------|------------------------|
+| Article | `page` |
+| Course | `course` |
+| Quiz | `quiz` |
+| Audio | `audio` |
+| Video | `video` |
+
+**Document Structure:**
+```python
+{
+    "id": "generated-uuid",
+    "instanceId": "tenant-id",
+    "contentType": "audio",
+    "title": "...",
+    "description": "...",
+    "pillar": "pillar-id",
+    "category": "category-id",
+    "tags": ["tag1", "tag2"],
+    "mediaPath": "gs://bucket/instance/audio/...",
+    "thumbnailPath": "gs://bucket/instance/images/...",
+    "duration": 180,  # seconds
+    "published": true,
+    "createdAt": timestamp,
+    "updatedAt": timestamp
 }
 ```
 
-### 5. Content Validator Service
+---
 
-**Responsibility:** Multi-layer validation for content quality.
+## Staging Workflow
 
-**5-Layer Validation Chain:**
-
-| Layer | Timing | Purpose | Implementation |
-|-------|--------|---------|----------------|
-| 1. Taxonomy | Pre-API | Fail-fast | `taxonomy_validator.py` |
-| 2. Schema | During | Structure | OpenAI `json_schema` |
-| 3. Content | Post | Quality | `content_validator_service.py` |
-| 4. Pydantic | Pre-save | Types | Pydantic models |
-| 5. Publisher | Pre-publish | Firestore | `publisher/content_validator.py` |
-
-**Validation Checks:**
-- Placeholder text detection (regex patterns)
-- Minimum content length (1000+ chars for descriptions)
-- Required field validation
-- Structure validation (sections, modules, lessons)
-- Educational language enforcement
-
-### 6. Draft Services
-
-**Responsibility:** Manages content drafts in PostgreSQL.
-
-**Content Types:**
-- `ArticleDraftService`
-- `CourseDraftService`
-- `QuizDraftService`
-- `AudioDraftService`
-- `VideoDraftService`
-
-**Draft Lifecycle:**
-```
-create() → update() → mark_ready_to_stage() → stage_to_content()
-```
-
-### 7. Staging Service
-
-**Responsibility:** Manages content review workflow.
-
-**Status Workflow:**
-```
-Draft → Staged (draft) → Approved → Published
-```
-
-### 8. Publisher Service
-
-**Responsibility:** Publishes approved content to Firestore and GCS.
-
-**Publishing Pipeline:**
-1. Validate content (5th layer)
-2. Upload thumbnail to GCS
-3. Write content document to Firestore
-4. Upload transcript (non-blocking)
-5. Update status to 'published'
-
-## Data Flow
-
-### Content Generation Flow
+### 3-Stage Content Lifecycle
 
 ```
-1. YouTube Sync
-   └── fetch_and_store_videos() → video_metadata table
-
-2. Transcript Import
-   └── queue_transcript_import() → transcript_queue table
-   └── process_queue() → transcript_text field
-
-3. AI Analysis
-   └── build_analysis_prompt() → OpenAI API
-   └── validate_response() → analysis_data (JSONB)
-
-4. Content Generation
-   └── build_*_prompt() → OpenAI API
-   └── validate_*() → Post-processing
-   └── create_draft() → *_drafts table
-
-5. Staging
-   └── mark_ready_to_stage() → stage_to_content()
-   └── staged_content table (status: 'draft')
-
-6. Review & Approval
-   └── User review → approve_content()
-   └── (status: 'approved')
-
-7. Publishing
-   └── publish_content() → Firestore + GCS
-   └── (status: 'published')
+┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+│   DRAFT     │─────▶│   STAGED    │─────▶│  PUBLISHED  │
+│ (PostgreSQL)│      │ (PostgreSQL)│      │ (Firestore) │
+└─────────────┘      └─────────────┘      └─────────────┘
+     │                     │                     │
+     │                     │                     │
+     ▼                     ▼                     ▼
+ Local files          Local files           GCS + Firestore
+ Work in progress     Ready for review      Live content
 ```
 
-## Database Schema
+**Draft Stage:**
+- Content stored in PostgreSQL
+- Media files stored locally
+- Can be edited, regenerated, deleted
+- Status: `draft`
 
-### PostgreSQL (Staging)
+**Staged Stage:**
+- Moved from draft to staging table
+- Ready for review
+- Can be approved or rejected
+- Status: `staged`, `approved`, `rejected`
+
+**Published Stage:**
+- Media uploaded to GCS
+- Content document created in Firestore
+- Live and accessible
+- Status: `published`
+
+---
+
+## Validation Architecture
+
+### 5-Layer Validation Chain
 
 ```
-video_metadata
-├── id (UUID)
-├── youtube_id (VARCHAR)
-├── title, description
-├── transcript_text (TEXT)
-├── analysis_data (JSONB)
-└── processing_status
-
-transcript_queue
-├── id (UUID)
-├── video_id (FK)
-├── status (pending, processing, completed, failed)
-├── retry_count
-├── next_retry_at
-└── error_message
-
-article_drafts / course_drafts / quiz_drafts
-├── id (UUID)
-├── instance_id
-├── content (JSONB)
-├── status
-└── created_at, updated_at
-
-staged_content
-├── id (UUID)
-├── instance_id
-├── content_type
-├── content (JSONB)
-├── status (draft, approved, published)
-└── timestamps
-
-content_operations
-├── id (UUID)
-├── content_id (FK)
-├── operation_type (publish, delete)
-├── status (pending, in_progress, completed, failed)
-├── started_at, completed_at
-└── error_message
+Request
+   │
+   ▼
+┌─────────────────────────────────────┐
+│ Layer 1: Taxonomy Validation        │  Pre-API (fail-fast)
+│ - Pillar exists                     │
+│ - Category exists under pillar      │
+│ - Tags exist in instance            │
+└─────────────────────────────────────┘
+   │
+   ▼
+┌─────────────────────────────────────┐
+│ Layer 2: OpenAI Schema Validation   │  During generation
+│ - JSON schema enforcement           │
+│ - Required fields                   │
+│ - Type checking                     │
+└─────────────────────────────────────┘
+   │
+   ▼
+┌─────────────────────────────────────┐
+│ Layer 3: Content Quality Validation │  Post-generation
+│ - Placeholder detection             │
+│ - Minimum lengths                   │
+│ - Structure validation              │
+│ - Educational language check        │
+└─────────────────────────────────────┘
+   │
+   ▼
+┌─────────────────────────────────────┐
+│ Layer 4: Pydantic Validation        │  Pre-save
+│ - Type coercion                     │
+│ - Field constraints                 │
+│ - Custom validators                 │
+└─────────────────────────────────────┘
+   │
+   ▼
+┌─────────────────────────────────────┐
+│ Layer 5: Publisher Validation       │  Pre-publish
+│ - Firestore-ready format            │
+│ - Required fields for production    │
+│ - Final sanity checks               │
+└─────────────────────────────────────┘
+   │
+   ▼
+Published
 ```
 
-### Firestore (Production)
+---
 
-Published content writes to Nandi Platform's Firestore:
-- `content/{contentId}` - Content documents
-- `instances/{instanceId}/transcripts/{transcriptId}` - Transcript metadata
+## Data Flow: Complete Example
 
-### Google Cloud Storage
+### Text → Audio → Video → Publish
 
-Media files uploaded to instance-specific paths:
 ```
-{instanceId}/content/{filename}
-{instanceId}/thumbnails/{filename}
-{instanceId}/transcripts/{filename}
-```
+1. USER INPUT
+   └─> "Create a 3-minute meditation audio about breath awareness"
 
-## Retry & Error Handling
+2. AI GENERATION (Audio Generation Service)
+   └─> OpenAI API with audio script schema
+   └─> Output: AudioScript with segments, timing, voice settings
 
-### OpenAI Service Retry
+3. VOICE SYNTHESIS (Voice Service)
+   └─> Select provider (OpenAI TTS or ElevenLabs)
+   └─> Generate audio file (.mp3)
+   └─> Validate: format, duration, file size
 
-```python
-def generate_with_retry(prompt, schema):
-    for attempt in range(max_attempts):
-        try:
-            return call_openai(prompt, schema)
-        except RateLimitError:
-            delay = base_delay * (2 ** attempt)
-            sleep(delay)
-        except APITimeoutError:
-            delay = base_delay * (2 ** attempt)
-            sleep(delay)
-        except JSONDecodeError:
-            # Add stricter prompt and retry
-            prompt = add_json_enforcement(prompt)
-```
+4. VIDEO GENERATION (Video Generation Service)
+   └─> Promote audio draft to video draft
+   └─> Generate subtitles from script segments
+   └─> Create waveform visualization (librosa + matplotlib)
+   └─> Compose video with MoviePy
+   └─> Burn in subtitles
+   └─> Encode with FFmpeg (.mp4)
 
-### Transcript Queue Retry
+5. STAGING (Draft → Staged)
+   └─> Save to staged_content table
+   └─> Status: 'staged'
+   └─> Media files: local storage
 
-```python
-def schedule_retry(queue_item):
-    retry_count = queue_item.retry_count + 1
-    if retry_count > max_retries:
-        mark_failed(queue_item)
-        return
-    
-    delay = base_delay * (2 ** retry_count)
-    delay *= random.uniform(0.9, 1.1)  # Jitter
-    delay = min(delay, 300)  # Cap at 5 minutes
-    
-    queue_item.next_retry_at = now() + delay
-    queue_item.retry_count = retry_count
+6. REVIEW (Manual)
+   └─> Preview in web UI
+   └─> Approve → Status: 'approved'
+
+7. PUBLISHING (Publisher Service)
+   └─> Upload audio to GCS: {instance}/audio/{pillar}/{category}/...
+   └─> Upload video to GCS: {instance}/video/{pillar}/{category}/...
+   └─> Upload thumbnail to GCS
+   └─> Create Firestore document (contentType: 'video')
+   └─> Update status: 'published'
+
+8. LIVE
+   └─> Available on Nandi Platform
+   └─> Accessible via content player
 ```
 
-## Operational Metrics
-
-### Token Usage Tracking
-
-```python
-class OpenAIService:
-    total_tokens_used: int = 0
-    total_requests: int = 0
-    failed_requests: int = 0
-    
-    def get_usage_stats(self):
-        return {
-            "total_tokens_used": self.total_tokens_used,
-            "total_requests": self.total_requests,
-            "success_rate": (total - failed) / total,
-            "estimated_cost": self._calculate_cost()
-        }
-```
-
-### Health Monitoring
-
-```python
-class HealthMonitoringService:
-    def get_health_status(self):
-        return {
-            "success_rate_24h": calculate_rate(24h),
-            "success_rate_7d": calculate_rate(7d),
-            "success_rate_30d": calculate_rate(30d),
-            "error_counts": get_error_counts(),
-            "status": "healthy" | "degraded" | "unhealthy"
-        }
-```
+---
 
 ## Design Patterns
 
-### Singleton Services
+### Strategy Pattern (Video Styles)
 
-Services use singleton pattern for shared state:
-- `OpenAIService` - Token tracking across requests
-- `HealthMonitoringService` - Centralized metrics
-
-### Strategy Pattern
-
-Cleanup strategies for different content types:
-- `DefaultCleanupStrategy`
-- `PageCleanupStrategy`
-- `EmbedCleanupStrategy`
-
-### Factory Pattern
-
-Draft service factory for content type selection:
 ```python
-def get_draft_service(content_type):
+class VideoStyleGenerator(ABC):
+    @abstractmethod
+    def generate(self, audio_path: str, output_path: str) -> None:
+        pass
+
+class WaveformGenerator(VideoStyleGenerator):
+    def generate(self, audio_path, output_path):
+        # Animated waveform visualization
+        pass
+
+class StaticBackgroundGenerator(VideoStyleGenerator):
+    def generate(self, audio_path, output_path):
+        # Static image with audio
+        pass
+
+class SlideshowGenerator(VideoStyleGenerator):
+    def generate(self, audio_path, output_path):
+        # Multiple images as slides
+        pass
+```
+
+### Service Layer Pattern
+
+```
+┌─────────────────┐
+│   API Layer     │  FastAPI routes
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│  Service Layer  │  Business logic
+│  - Generation   │
+│  - Voice        │
+│  - Video        │
+│  - Publishing   │
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│   Data Layer    │  PostgreSQL, Firestore, GCS
+└─────────────────┘
+```
+
+### Factory Pattern (Draft Services)
+
+```python
+def get_draft_service(content_type: str) -> BaseDraftService:
     services = {
         "article": ArticleDraftService,
         "course": CourseDraftService,
         "quiz": QuizDraftService,
+        "audio": AudioDraftService,
+        "video": VideoDraftService,
     }
     return services[content_type]()
 ```
 
-## Security Considerations
+---
 
-- API keys stored in environment variables
+## Security & Multi-Tenancy
+
+### Instance Isolation
+
+- All content scoped by `instanceId`
+- GCS paths prefixed with instance ID
+- Firestore queries filter by instance
+- Validation ensures instance exists
+
+### API Security
+
+- API keys in environment variables
 - No sensitive data in logs
-- Sanitized error messages
 - Rate limiting respected
 - Fail-fast on invalid input
 
+---
+
 ## Performance Optimizations
 
-- **Fail-fast validation**: Taxonomy check before API calls
-- **Token limits**: Content-type specific max tokens
-- **Queue-based processing**: Handles rate limits gracefully
-- **Batch operations**: Bulk publishing for approved content
-- **Connection pooling**: PostgreSQL connection management
+1. **Fail-Fast Validation**: Taxonomy check before expensive API calls
+2. **Streaming Audio**: Large audio files processed in chunks
+3. **Frame Caching**: Video frames cached during generation
+4. **Connection Pooling**: PostgreSQL connection management
+5. **Async Processing**: Background tasks for long operations

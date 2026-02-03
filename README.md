@@ -55,17 +55,18 @@ A white-label platform enabling organizations to launch branded content systems.
 
 ### [Content Generator](./projects/content-generator/) | [📖 Documentation](./projects/content-generator/README.md) | [🏗️ Architecture](./projects/content-generator/architecture.md)
 
-**Production-ready** | AI-powered content generation pipeline with multi-step LLM orchestration
+**Production-ready** | AI content platform with text-to-audio-to-video pipeline
 
-Transforms YouTube transcripts into production-ready articles, courses, quizzes using structured outputs, 5-layer validation, and operational metrics.
+Complete content creation system: generate articles, courses, quizzes from prompts; convert text to audio (OpenAI TTS, ElevenLabs); create videos with waveform visualization and subtitles; publish to Firebase/GCS.
 
 **Key Achievements:**
-- ✅ Multi-step pipeline: YouTube Sync → AI Analysis → Review → Publish
+- ✅ Multi-pathway generation: From prompts or YouTube transcripts
+- ✅ Audio pipeline: OpenAI TTS (6 voices) + ElevenLabs integration
+- ✅ Video pipeline: Waveform visualization + burned-in subtitles
 - ✅ 5-layer validation chain with fail-fast patterns
-- ✅ Structured outputs with OpenAI JSON schema enforcement
-- ✅ Retry logic with exponential backoff and cost tracking
+- ✅ Multi-tenant publishing to GCS and Firestore
 
-**Tech Stack:** Python, FastAPI, PostgreSQL, OpenAI, Firebase, GCS
+**Tech Stack:** Python, FastAPI, OpenAI, ElevenLabs, MoviePy, librosa, PostgreSQL, Firebase, GCS
 
 ---
 
@@ -159,6 +160,8 @@ A collection showcasing Domain-Driven Design, NLP processing, astronomical calcu
 | **Development Period** | Nov 2025 - Feb 2026 |
 | **Services** | 25+ core services |
 | **Content Types** | 5 (Article, Course, Quiz, Audio, Video) |
+| **TTS Providers** | 2 (OpenAI TTS, ElevenLabs) |
+| **Video Styles** | Waveform visualization with subtitles |
 
 ### Social Media Agent
 
@@ -214,6 +217,9 @@ A collection showcasing Domain-Driven Design, NLP processing, astronomical calcu
 - ✅ Retry logic with exponential backoff
 - ✅ Cost tracking and optimization
 - ✅ Operational metrics and health monitoring
+- ✅ Text-to-Speech (OpenAI TTS, ElevenLabs)
+- ✅ Audio-to-Video conversion with waveform visualization
+- ✅ Subtitle generation and burning
 
 ### Architecture & Design
 - ✅ Multi-tenant SaaS architecture

@@ -1,18 +1,24 @@
 # Content Generator
 
-An AI-powered content generation pipeline that transforms YouTube transcripts into production-ready articles, courses, quizzes, and audio/video content using multi-step LLM orchestration.
+An AI-powered content creation platform that generates articles, courses, quizzes, audio, and video content from prompts, with a complete text-to-audio-to-video pipeline and publishing to Firebase/GCS.
 
 **🔗 Quick Links:** [Architecture](./architecture.md) | [Features](./features.md) | [Tech Stack](./tech-stack.md) | [Code Samples](./code-samples/) | [Case Studies](./case-studies/)
 
 ## Overview
 
-Content Generator is a comprehensive AI content pipeline that orchestrates multiple services end-to-end: YouTube synchronization, transcript processing, AI analysis with structured outputs, multi-layer validation, and publishing to Firestore/GCS. Built with production-grade patterns including retry logic, cost tracking, and operational metrics.
+Content Generator is a comprehensive AI content platform with multiple generation pathways:
+
+1. **Prompt-Based Generation**: Create articles, courses, quizzes, and audio scripts directly from text prompts
+2. **YouTube Integration**: Sync channels, import transcripts, analyze content
+3. **Audio Pipeline**: Convert text to speech using OpenAI TTS or ElevenLabs
+4. **Video Pipeline**: Convert audio to video with waveform visualization and burned-in subtitles
+5. **Publishing**: Upload to GCS and publish to Firestore with multi-tenant support
 
 ## Production Status
 
 **Status:** Production-ready  
 **Integration:** Powers content generation for [Nandi Platform](../nandi-platform/)  
-**Workflow:** YouTube Sync → AI Analysis → Review → Publish
+**Workflow:** Prompt/YouTube → AI Generation → Audio → Video → Review → Publish
 
 ## Project Statistics
 
@@ -24,121 +30,178 @@ Content Generator is a comprehensive AI content pipeline that orchestrates multi
 | **Development Period** | Nov 2025 - Feb 2026 |
 | **Services** | 25+ core services |
 | **Content Types** | 5 (Article, Course, Quiz, Audio, Video) |
+| **TTS Providers** | 2 (OpenAI TTS, ElevenLabs) |
 | **Validation Layers** | 5-layer validation chain |
 
 ## Key Achievements
 
-- ✅ **Multi-Step LLM Pipeline**: End-to-end orchestration from YouTube to Firestore
-- ✅ **Structured Outputs**: OpenAI JSON schema enforcement for consistent outputs
+- ✅ **Multi-Pathway Content Generation**: Create content from prompts or YouTube transcripts
+- ✅ **Text-to-Audio Pipeline**: OpenAI TTS and ElevenLabs voice synthesis
+- ✅ **Audio-to-Video Pipeline**: Waveform visualization with burned-in subtitles
+- ✅ **Structured AI Outputs**: OpenAI JSON schema enforcement for consistent content
 - ✅ **5-Layer Validation Chain**: Pre-API, schema, content, Pydantic, publish-time validation
-- ✅ **Retry with Exponential Backoff**: Rate limit handling, jitter, queue-based retries
+- ✅ **Multi-Tenant Publishing**: Instance-specific paths in GCS and Firestore
 - ✅ **Cost Tracking & Metrics**: Token usage, success rates, health monitoring
-- ✅ **Production Integration**: Publishes directly to Nandi Platform's Firestore/GCS
 
 ## Technologies Used
 
-### AI & LLM
+### AI & Content Generation
 - **OpenAI GPT-4o/GPT-4o-mini** - Content generation with structured outputs
 - **OpenAI DALL·E** - Hero image generation
-- **OpenAI TTS / ElevenLabs** - Voice synthesis
 - **Prompt Templates** - Layered prompt engineering system
 
-### Backend & Services
+### Audio Pipeline
+- **OpenAI TTS** - Text-to-speech (alloy, echo, fable, onyx, nova, shimmer voices)
+- **ElevenLabs** - Premium voice synthesis with custom voices
+- **Audio Processing** - Duration calculation, format validation, segment combination
+
+### Video Pipeline
+- **MoviePy** - Video composition and editing
+- **librosa** - Audio analysis for waveform visualization
+- **matplotlib** - Waveform rendering
+- **FFmpeg** - Video encoding with optimized settings
+- **Subtitle Service** - SRT generation, burned-in subtitles
+
+### Backend & Data
 - **Python 3.11+** - Core language
 - **FastAPI** - API framework
 - **PostgreSQL** - Staging database for drafts
 - **Pydantic** - Data validation and schemas
 
-### Integration & Publishing
-- **Firebase Admin SDK** - Firestore writes
-- **Google Cloud Storage** - Media file uploads
-- **YouTube Data API v3** - Video sync and transcript fetching
-
-### Patterns & Architecture
-- **Multi-layer Validation** - 5-stage validation pipeline
-- **Exponential Backoff** - Retry logic with jitter
-- **Queue-based Processing** - Transcript queue with retry scheduling
-- **Operation Tracking** - Audit trail with status workflow
+### Cloud & Publishing
+- **Firebase Admin SDK** - Firestore document publishing
+- **Google Cloud Storage** - Media file storage (audio, video, images, transcripts)
+- **YouTube Data API v3** - Channel sync and transcript import
 
 ## Architecture Highlights
 
-### Multi-Step Pipeline
+### Complete Content Pipeline
 
 ```
-YouTube API → fetch_and_store_videos() → PostgreSQL
-    ↓
-Transcript Queue → import_transcript_for_video() → transcript_text
-    ↓
-AnalysisPromptBuilder.build_analysis_prompt() → OpenAI API
-    ↓
-ContentValidatorService.validate_*() → Post-processing
-    ↓
-BaseDraftService.create() → PostgreSQL drafts
-    ↓
-stage_to_content() → StagedContent (status: 'draft')
-    ↓
-approve_content() → (status: 'approved')
-    ↓
-Publisher.publish_content() → Firestore + GCS
+┌─────────────────────────────────────────────────────────────────┐
+│                    CONTENT GENERATION PATHWAYS                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  PATHWAY 1: From Prompt                                         │
+│  ─────────────────────                                          │
+│  User Prompt → OpenAI → Structured Content → Draft              │
+│                                                                 │
+│  PATHWAY 2: From YouTube                                        │
+│  ────────────────────────                                       │
+│  YouTube Sync → Transcript → AI Analysis → Content → Draft      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                       AUDIO PIPELINE                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Text/Script → Voice Service → Audio File (.mp3)                │
+│                    │                                            │
+│                    ├── OpenAI TTS (alloy, echo, fable, etc.)   │
+│                    └── ElevenLabs (custom voices)               │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                       VIDEO PIPELINE                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Audio → Video Generator → Subtitles → Video File (.mp4)        │
+│              │                │                                 │
+│              │                └── YouTube-style burned-in       │
+│              │                                                  │
+│              └── Waveform visualization (animated)              │
+│                  Real-time sync with audio                      │
+│                  Customizable colors/styling                    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    STAGING & PUBLISHING                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Draft → Stage → Review → Approve → Publish                     │
+│                              │                                  │
+│                              ├── GCS: Audio, Video, Images      │
+│                              │       Instance-specific paths    │
+│                              │                                  │
+│                              └── Firestore: Content documents   │
+│                                  Multi-tenant isolation         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### 5-Layer Validation Chain
+### Content Types Supported
 
-| Layer | When | Purpose |
-|-------|------|---------|
-| **1. Taxonomy Validation** | Before API call | Fail-fast to save API costs |
-| **2. OpenAI Schema** | During generation | JSON structure enforcement |
-| **3. Content Validation** | Post-generation | Placeholder detection, length checks |
-| **4. Pydantic Validation** | Pre-save | Type safety, required fields |
-| **5. Publisher Validation** | Pre-publish | Firestore-ready verification |
+| Type | Generation | Audio | Video | Output |
+|------|------------|-------|-------|--------|
+| **Article** | ✅ From prompt/transcript | — | — | Firestore page |
+| **Course** | ✅ Modules, lessons, objectives | — | — | Firestore course |
+| **Quiz** | ✅ Multiple choice, T/F, short answer | — | — | Firestore quiz |
+| **Audio** | ✅ Script with segments | ✅ TTS | — | GCS audio + Firestore |
+| **Video** | ✅ From audio | ✅ Required | ✅ Waveform + subtitles | GCS video + Firestore |
 
-### Prompt Engineering
+### Audio Formats & Voices
 
-- **Template-based System**: Markdown templates with variable interpolation
-- **Layered Prompts**: System prompts, user prompts, context injection
-- **Content-Type Specific**: Article, course, quiz, audio, video templates
-- **Educational Language Enforcement**: Rejects narrative style outputs
+**OpenAI TTS:**
+- Voices: alloy, echo, fable, onyx, nova, shimmer
+- Speed control: 0.25x - 4.0x
+- Models: tts-1, tts-1-hd
+
+**ElevenLabs:**
+- Custom voice library
+- Stability and similarity boost controls
+- Speed control: 0.5x - 2.0x
+
+### Video Generation
+
+- **Waveform Style**: Animated audio visualization synced to playback
+- **Subtitles**: YouTube-style with background boxes
+- **Resolutions**: 1080p, 720p, 480p
+- **Encoding**: FFmpeg with optimized settings
 
 ## Features
 
 ### Fully Implemented ✅
-- YouTube channel/playlist synchronization
-- Transcript queue with retry scheduling
-- AI analysis with structured outputs
-- Article, course, quiz generation
-- Audio/video content generation
+- Article generation from prompts
+- Course structure generation (modules, lessons)
+- Quiz generation (multiple types, difficulties)
+- Audio script generation (podcast, narration, meditation, etc.)
+- OpenAI TTS voice synthesis
+- ElevenLabs voice synthesis
+- Audio-to-video conversion
+- Waveform visualization
+- Burned-in subtitle generation
+- YouTube channel/playlist sync
+- Transcript import and analysis
+- Hero image generation (DALL·E)
 - Multi-layer validation chain
+- GCS media upload (instance-specific paths)
+- Firestore content publishing
 - PostgreSQL staging workflow
-- Firestore/GCS publishing
-- Operation tracking and audit trail
-- Health monitoring (24h, 7d, 30d metrics)
-- Cost tracking and estimation
-
-### Content Types Supported
-- **Articles** - Long-form content with sections
-- **Courses** - Modules, lessons, learning objectives
-- **Quizzes** - Multiple choice questions with explanations
-- **Audio** - Voice-generated content with scripts
-- **Video** - Video content with subtitles
+- Cost tracking and metrics
 
 ## Cost Efficiency
 
-**Model Configuration:**
+**AI Generation:**
 | Model | Cost (per 1M tokens) | Use Case |
 |-------|---------------------|----------|
 | `gpt-4o-mini` | ~$0.375 | Default, cost-effective |
 | `gpt-4o` | ~$10 | Higher quality |
-| `gpt-4-turbo` | ~$15 | Maximum capability |
 
-**Cost Optimization Strategies:**
-- Fail-fast validation before API calls
-- Token limits per content type
-- Default to cost-effective model (gpt-4o-mini)
-- Structured outputs reduce retries
+**Voice Synthesis:**
+| Provider | Cost | Use Case |
+|----------|------|----------|
+| OpenAI TTS | ~$15/1M chars | Standard voices |
+| ElevenLabs | ~$0.30/1K chars | Premium/custom voices |
 
 ## Documentation
 
-- [Architecture](./architecture.md) - System design and pipeline flow
+- [Architecture](./architecture.md) - Full pipeline flow and component details
 - [Features](./features.md) - Detailed feature breakdown
 - [Tech Stack](./tech-stack.md) - Technology choices and rationale
 
@@ -147,8 +210,7 @@ Publisher.publish_content() → Firestore + GCS
 See [case-studies/](./case-studies/) for detailed deep-dives on:
 - Multi-layer validation implementation
 - Retry logic with exponential backoff
-- Prompt engineering patterns
-- Cost optimization strategies
+- Audio/video pipeline architecture
 
 ## Code Samples
 
@@ -159,29 +221,31 @@ Sanitized code examples available in:
 
 As the developer of this project, I was responsible for:
 
-- **Pipeline Architecture**: Designed end-to-end content generation pipeline
-- **AI Integration**: Implemented OpenAI structured outputs with schema enforcement
+- **Pipeline Architecture**: Designed end-to-end content generation with multiple pathways
+- **AI Integration**: Implemented OpenAI structured outputs and DALL·E image generation
+- **Audio Pipeline**: Built TTS integration with OpenAI and ElevenLabs
+- **Video Pipeline**: Implemented waveform visualization and subtitle burning
 - **Validation System**: Built 5-layer validation chain with fail-fast patterns
-- **Retry Logic**: Implemented exponential backoff with jitter and queue-based retries
-- **Operational Metrics**: Built token tracking, cost estimation, health monitoring
-- **Integration**: Connected pipeline to Nandi Platform's Firestore/GCS
+- **Publishing**: Integrated GCS storage and Firestore publishing
+- **Multi-Tenant**: Designed instance-specific paths and isolation
 
 ## Technical Challenges Solved
 
-1. **Structured Output Reliability**: OpenAI JSON schema enforcement for consistent outputs
-2. **Rate Limit Handling**: Exponential backoff with jitter and Retry-After header support
-3. **Cost Optimization**: Fail-fast validation saves 30%+ on unnecessary API calls
-4. **Content Quality**: Multi-layer validation catches placeholders, enforces minimums
-5. **Transcript Processing**: Queue-based system handles YouTube API rate limits
-6. **Operational Visibility**: Health monitoring with 24h/7d/30d success rate tracking
+1. **Multi-Pathway Generation**: Unified architecture for prompt-based and YouTube-based content
+2. **TTS Provider Abstraction**: Single interface for OpenAI TTS and ElevenLabs
+3. **Real-Time Waveform Sync**: librosa analysis synced with MoviePy composition
+4. **Subtitle Timing**: Industry-standard timing (2.5 words/sec) with word wrapping
+5. **Multi-Tenant Storage**: Instance-specific GCS paths for complete isolation
+6. **Content Quality**: 5-layer validation ensures consistent, high-quality output
 
 ## Results
 
 - ✅ Generates production-ready content in minutes (vs hours manually)
+- ✅ Supports 5 content types with full lifecycle management
+- ✅ Audio generation with 2 TTS providers and multiple voices
+- ✅ Video generation with animated waveform and subtitles
+- ✅ Multi-tenant publishing to GCS and Firestore
 - ✅ 5-layer validation ensures consistent quality
-- ✅ Cost-effective at ~$0.002 per article with gpt-4o-mini
-- ✅ Fail-fast patterns save ~30% on API costs
-- ✅ Health monitoring enables proactive issue detection
 
 ---
 
